@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Ren alkohol per burk</title>
+  <style>
+    :root{--bg:#0b1020;--text:#e9eeff;--muted:rgba(233,238,255,.75);--border:rgba(255,255,255,.12);--accent:#7aa2ff;}
+    *{box-sizing:border-box}
+    body{margin:0;color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      background: radial-gradient(1200px 800px at 10% 0%, rgba(122,162,255,0.25), transparent 55%),
+                  radial-gradient(900px 700px at 90% 10%, rgba(141,255,181,0.18), transparent 60%),
+                  var(--bg);}
+    header,main,footer{max-width:900px;margin:0 auto;padding:18px}
+    header{padding-top:28px}
+    h1{margin:0 0 6px;font-size:clamp(22px,3vw,34px)}
+    p{margin:0;color:var(--muted);line-height:1.35}
+    .card{margin-top:14px;
+      background:linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+      border:1px solid var(--border);border-radius:16px;padding:16px;
+      box-shadow:0 12px 40px rgba(0,0,0,.35);backdrop-filter: blur(6px);}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    @media(max-width:540px){.row{grid-template-columns:1fr}}
+    label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+    input,button{width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--border);
+      background:rgba(0,0,0,.20);color:var(--text);outline:none}
+    input:focus{border-color:rgba(122,162,255,.65);box-shadow:0 0 0 4px rgba(122,162,255,.12)}
+    button{cursor:pointer;background:linear-gradient(180deg, rgba(122,162,255,.85), rgba(122,162,255,.55));
+      border:1px solid rgba(122,162,255,.65);font-weight:800}
+    .metric{margin-top:12px;border:1px solid var(--border);border-radius:14px;padding:12px;background:rgba(0,0,0,.18)}
+    .k{font-size:12px;color:rgba(233,238,255,.72);margin-bottom:4px}
+    .v{font-size:22px;font-weight:900}
+    .hint{font-size:12px;color:rgba(233,238,255,.70);line-height:1.35;margin-top:8px}
+    a{color:var(--accent);text-decoration:none}
+    code{background:rgba(255,255,255,.06); padding:2px 6px; border-radius:8px; border:1px solid var(--border)}
+  </style>
+</head>
+<body>
+<header>
+  <h1>🍺 Ren alkohol per burk</h1>
+  <p>Volym + % in. Ren alkohol + jämförelser ut. Enkelt, som det borde vara.</p>
+</header>
+
+<main>
+  <div class="card">
+    <div class="row">
+      <div>
+        <label for="volCl">Volym (cl)</label>
+        <input id="volCl" type="number" min="0" step="0.1" value="33"/>
+      </div>
+      <div>
+        <label for="abv">Alkoholhalt (%)</label>
+        <input id="abv" type="number" min="0" step="0.1" value="5.2"/>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:10px;">
+      <div class="hint" style="align-self:center;">
+        Beräknar gram med standardvärde (etanol-densitet 0,789 g/ml). Du slipper bry dig. ✅
+      </div>
+      <div style="display:flex;align-items:end;">
+        <button id="calc" type="button">Räkna</button>
+      </div>
+    </div>
+
+    <div class="metric">
+      <div class="k">Ren alkohol (cl)</div>
+      <div class="v" id="pureCl">–</div>
+    </div>
+
+    <div class="metric">
+      <div class="k">Ren alkohol (gram)</div>
+      <div class="v" id="pureG">–</div>
+      <div class="hint">Det här är siffran som ofta avrundas till “≈12 g” på informationssidor.</div>
+    </div>
+
+    <div class="metric">
+      <div class="k">Motsvarar starksprit (40%)</div>
+      <div class="v" id="spiritEq">–</div>
+      <div class="hint">Hur många cl 40% sprit som innehåller samma mängd ren alkohol.</div>
+    </div>
+
+    <p class="hint">
+      Formel: <code>ren alkohol (cl) = volym × (alkoholhalt / 100)</code><br/>
+      Och sprit-jämförelsen: <code>cl sprit (40%) = ren alkohol (cl) / 0,40</code>
+    </p>
+
+    <p class="hint"><a href="./index.html">← Till start</a></p>
+  </div>
+</main>
+
+<footer>
+  <p class="hint">Obs: Små skillnader mot andra sidor beror ofta på avrundning och standardantaganden.</p>
+</footer>
+
+<script>
+  const $ = (id)=>document.getElementById(id);
+  const DENSITY = 0.789; // g/ml (standard)
+
+  function num(n,d=2){
+    if(!isFinite(n)) return "–";
+    const p = Math.pow(10,d);
+    return (Math.round(n*p)/p).toLocaleString("sv-SE",{minimumFractionDigits:d, maximumFractionDigits:d});
+  }
+
+  function calc(){
+    const volCl = +$("volCl").value || 0;
+    const abv = +$("abv").value || 0;
+
+    const pureCl = volCl * (abv/100);
+    const pureMl = pureCl * 10;
+    const pureG = pureMl * DENSITY;
+
+    const spiritCl = pureCl / 0.40;
+
+    $("pureCl").textContent = num(pureCl, 3);
+    $("pureG").textContent = num(pureG, 1) + " g";
+    $("spiritEq").textContent = num(spiritCl, 2) + " cl";
+  }
+
+  document.addEventListener("DOMContentLoaded", ()=>{
+    $("calc").addEventListener("click", calc);
+    ["volCl","abv"].forEach(id => $(id).addEventListener("input", calc));
+    calc();
+  });
+</script>
+</body>
+</html>

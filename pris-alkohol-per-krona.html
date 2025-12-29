@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pris & Alkohol per Krona – inkl. omkostnader</title>
+  <style>
+    :root{
+      --bg:#0b1020; --text:#e9eeff; --muted:rgba(233,238,255,.75);
+      --border:rgba(255,255,255,.12); --accent:#7aa2ff;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; color:var(--text);
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      background: radial-gradient(1200px 800px at 10% 0%, rgba(122,162,255,0.25), transparent 55%),
+                  radial-gradient(900px 700px at 90% 10%, rgba(141,255,181,0.18), transparent 60%),
+                  var(--bg);
+    }
+    header, main, footer{max-width:1100px; margin:0 auto; padding:18px}
+    header{padding-top:28px}
+    h1{margin:0 0 6px; font-size:clamp(22px,3vw,34px)}
+    p{margin:0; color:var(--muted); line-height:1.35}
+    .grid{display:grid; gap:16px; grid-template-columns:1.05fr .95fr}
+    @media(max-width:980px){.grid{grid-template-columns:1fr}}
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+      border:1px solid var(--border);
+      border-radius:16px; padding:16px;
+      box-shadow:0 12px 40px rgba(0,0,0,.35);
+      backdrop-filter: blur(6px);
+    }
+    .row{display:grid; gap:10px; grid-template-columns:1fr 1fr}
+    @media(max-width:540px){.row{grid-template-columns:1fr}}
+    label{display:block; font-size:12px; color:var(--muted); margin-bottom:6px}
+    input, select, button{
+      width:100%; padding:10px 12px; border-radius:12px;
+      border:1px solid var(--border);
+      background:rgba(0,0,0,.20); color:var(--text); outline:none;
+    }
+    input:focus, select:focus{
+      border-color:rgba(122,162,255,.65);
+      box-shadow:0 0 0 4px rgba(122,162,255,.12);
+    }
+    button{
+      cursor:pointer;
+      background:linear-gradient(180deg, rgba(122,162,255,.85), rgba(122,162,255,.55));
+      border:1px solid rgba(122,162,255,.65);
+      font-weight:700;
+    }
+    button.secondary{
+      background:rgba(0,0,0,.20);
+      border:1px solid var(--border);
+      font-weight:650;
+    }
+    .split{display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap}
+    .hint{font-size:12px; color:rgba(233,238,255,.70)}
+    .results{display:grid; gap:10px; grid-template-columns:repeat(2,1fr); margin-top:12px}
+    @media(max-width:540px){.results{grid-template-columns:1fr}}
+    .metric{border:1px solid var(--border); border-radius:14px; padding:12px; background:rgba(0,0,0,.18)}
+    .metric .k{font-size:12px; color:rgba(233,238,255,.72); margin-bottom:4px}
+    .metric .v{font-size:20px; font-weight:800}
+    table{
+      width:100%; border-collapse:collapse; border-radius:14px; overflow:hidden;
+      border:1px solid var(--border); background:rgba(0,0,0,.16);
+    }
+    th,td{padding:10px; border-bottom:1px solid rgba(255,255,255,.08); text-align:left; font-size:13px}
+    th{font-size:12px; color:rgba(233,238,255,.75); background:rgba(255,255,255,.04); cursor:pointer; position:sticky; top:0}
+    tr:last-child td{border-bottom:0}
+    .danger{
+      display:none; margin-top:10px;
+      background: linear-gradient(180deg, rgba(255,122,122,0.22), rgba(0,0,0,0.18));
+      border: 1px solid rgba(255,122,122,0.35);
+      padding: 10px 12px; border-radius: 12px;
+      font-size: 12px; color: rgba(233,238,255,0.85);
+    }
+    code{background:rgba(255,255,255,.06); padding:2px 6px; border-radius:8px; border:1px solid var(--border)}
+  </style>
+</head>
+<body>
+<header>
+  <h1>🍺 Pris & Alkohol per krona (inkl. omkostnader)</h1>
+  <p>Lägg till en rad, lägg på omkostnader, få ut <b>pris per burk</b> + <b>alkohol per krona</b>. Excel får vila.</p>
+</header>
+
+<main class="grid">
+  <section class="card">
+    <h2 style="margin:0 0 10px;">1) Välj/lägg till produkt</h2>
+
+    <div class="row">
+      <div>
+        <label for="selectBeer">Sparade rader</label>
+        <select id="selectBeer"></select>
+      </div>
+      <div>
+        <label for="buyMode">Prisläge</label>
+        <select id="buyMode">
+          <option value="crate">Pris per flak</option>
+          <option value="unit">Pris per burk/flaska</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:10px;">
+      <div>
+        <label for="beerName">Ölnamn</label>
+        <input id="beerName" type="text" placeholder="t.ex. Norrlands Guld / IPA Deluxe" />
+      </div>
+      <div>
+        <label for="quantityCrates">Antal flak</label>
+        <input id="quantityCrates" type="number" min="1" step="1" value="1" />
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:10px;">
+      <div id="cratePriceWrap">
+        <label for="cratePrice">Pris per flak (kr)</label>
+        <input id="cratePrice" type="number" min="0" step="0.01" />
+      </div>
+      <div id="countWrap">
+        <label for="countPerCrate">Antal burkar per flak</label>
+        <input id="countPerCrate" type="number" min="1" step="1" value="24" />
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:10px;">
+      <div id="unitPriceWrap" style="display:none;">
+        <label for="unitPrice">Pris per burk/flaska (kr)</label>
+        <input id="unitPrice" type="number" min="0" step="0.01" />
+      </div>
+      <div>
+        <label for="unitsTotal">Totalt antal burkar/flaskor (valfritt)</label>
+        <input id="unitsTotal" type="number" min="1" step="1" placeholder="annars räknas från flak" />
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:10px;">
+      <div>
+        <label for="clPerUnit">Volym per burk/flaska (cl)</label>
+        <input id="clPerUnit" type="number" min="0" step="0.1" placeholder="t.ex. 50" />
+      </div>
+      <div>
+        <label for="abv">Alkoholhalt (%)</label>
+        <input id="abv" type="number" min="0" step="0.1" placeholder="t.ex. 5.2" />
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:10px;">
+      <div>
+        <label for="overhead">Omkostnader (kr) <span class="hint">totalt för hela köpet</span></label>
+        <input id="overhead" type="number" min="0" step="0.01" value="0" />
+      </div>
+      <div>
+        <label for="notes">Anteckning (valfritt)</label>
+        <input id="notes" type="text" placeholder="t.ex. 'färja', 'taxi', 'handlade hungrig'" />
+      </div>
+    </div>
+
+    <div class="split" style="margin-top:12px;">
+      <button id="saveRow" type="button">Spara/uppdatera rad</button>
+      <div style="display:flex; gap:10px; width:min(420px,100%);">
+        <button id="newRow" type="button" class="secondary">Ny rad</button>
+        <button id="deleteRow" type="button" class="secondary">Ta bort vald</button>
+      </div>
+    </div>
+
+    <div id="warn" class="danger"></div>
+
+    <div class="results" aria-live="polite">
+      <div class="metric">
+        <div class="k">Totalkostnad (kr)</div>
+        <div class="v" id="totalCost">–</div>
+      </div>
+      <div class="metric">
+        <div class="k">Totalt antal burkar</div>
+        <div class="v" id="totalUnits">–</div>
+      </div>
+      <div class="metric">
+        <div class="k">Pris per burk (kr)</div>
+        <div class="v" id="pricePerUnit">–</div>
+      </div>
+      <div class="metric">
+        <div class="k">Omkostnad per burk (kr)</div>
+        <div class="v" id="overheadPerUnit">–</div>
+      </div>
+      <div class="metric">
+        <div class="k">Total ren alkohol (cl)</div>
+        <div class="v" id="pureAlcohol">–</div>
+      </div>
+      <div class="metric">
+        <div class="k">Alkohol per krona (cl/kr)</div>
+        <div class="v" id="apk">–</div>
+      </div>
+    </div>
+
+    <p class="hint" style="margin-top:10px;">
+      Logik: <b>totalkostnad</b> = varukostnad + omkostnader. <b>pris/burk</b> = totalkostnad ÷ antal burkar.
+      <b>ren alkohol</b> = volym(cl) × alkoholhalt(%) × antal burkar. <b>alkohol/kr</b> = ren alkohol ÷ totalkostnad.
+    </p>
+  </section>
+
+  <section class="card">
+    <div class="split">
+      <h2 style="margin:0;">2) Jämför sparade rader</h2>
+      <span class="hint">Klicka rubriker för sortering</span>
+    </div>
+
+    <div style="margin-top:10px; display:grid; grid-template-columns: 1fr 160px; gap:10px;">
+      <input id="filter" type="text" placeholder="Sök… (namn/anteckning)" />
+      <button id="resetSort" type="button" class="secondary">Återställ</button>
+    </div>
+
+    <div style="margin-top:12px; max-height:520px; overflow:auto; border-radius:14px;">
+      <table id="tbl">
+        <thead>
+          <tr>
+            <th data-k="name">Produkt</th>
+            <th data-k="ppu">Pris/burk</th>
+            <th data-k="apk">cl/kr</th>
+            <th data-k="mode">Läge</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <p class="hint" style="margin-top:10px;">
+      Allt sparas lokalt i din webbläsare (LocalStorage). Inga servrar. Inga cookies. Bara konsekvenser. 😄
+    </p>
+  </section>
+</main>
+
+<footer>
+  <p class="hint">GitHub Pages: lägg filen som <code>index.html</code> i repo-root → Settings → Pages → Deploy from branch.</p>
+</footer>
+
+<script>
+  const KEY = "beer_price_rows_v2";
+
+  function loadRows(){
+    try{
+      const raw = localStorage.getItem(KEY);
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    }catch(e){ return []; }
+  }
+  function saveRows(rows){ localStorage.setItem(KEY, JSON.stringify(rows)); }
+
+  function money(n){
+    if(!isFinite(n)) return "–";
+    return (Math.round(n*100)/100).toLocaleString("sv-SE",{minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+  function num(n, d=2){
+    if(!isFinite(n)) return "–";
+    const p = Math.pow(10,d);
+    return (Math.round(n*p)/p).toLocaleString("sv-SE",{minimumFractionDigits:d, maximumFractionDigits:d});
+  }
+  function intish(n){
+    if(!isFinite(n)) return "–";
+    return Math.round(n).toLocaleString("sv-SE");
+  }
+  function warn(msg){
+    const el = document.getElementById("warn");
+    if(!msg){ el.style.display="none"; el.textContent=""; return; }
+    el.style.display="block"; el.textContent = msg;
+  }
+  function uid(){ return Math.random().toString(16).slice(2) + Date.now().toString(16); }
+  function escapeHtml(s){
+    return String(s ?? "")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
+  function calcCurrent(){
+    const mode = document.getElementById("buyMode").value; // crate|unit
+    const crates = +document.getElementById("quantityCrates").value || 1;
+    const overhead = +document.getElementById("overhead").value || 0;
+
+    const unitsOverride = +document.getElementById("unitsTotal").value || 0;
+
+    const clPerUnit = +document.getElementById("clPerUnit").value || 0;
+    const abv = +document.getElementById("abv").value || 0;
+
+    let varukostnad = 0;
+    let units = 0;
+
+    if(mode === "crate"){
+      const cratePrice = +document.getElementById("cratePrice").value || 0;
+      const countPerCrate = +document.getElementById("countPerCrate").value || 0;
+
+      units = unitsOverride > 0 ? unitsOverride : (countPerCrate * crates);
+      varukostnad = cratePrice * crates;
+    }else{
+      const unitPrice = +document.getElementById("unitPrice").value || 0;
+      units = unitsOverride > 0 ? unitsOverride : 0;
+
+      if(units <= 0){
+        const fallback = (+document.getElementById("countPerCrate").value || 0) * crates;
+        units = fallback > 0 ? fallback : 0;
+      }
+      varukostnad = unitPrice * units;
+    }
+
+    const totalCost = varukostnad + overhead;
+    const ppu = units > 0 ? totalCost / units : NaN;
+    const overheadPerUnit = units > 0 ? overhead / units : NaN;
+
+    const pureAlcohol = units * clPerUnit * (abv/100.0);
+    const apk = totalCost > 0 ? pureAlcohol / totalCost : NaN;
+
+    return { mode, crates, overhead, units, varukostnad, totalCost, ppu, overheadPerUnit, clPerUnit, abv, pureAlcohol, apk };
+  }
+
+  let rows = loadRows();
+  let selectedId = null;
+  let sortKey = "apk";
+  let sortDir = "desc";
+
+  function setModeUI(){
+    const mode = document.getElementById("buyMode").value;
+    document.getElementById("unitPriceWrap").style.display = (mode==="unit") ? "block" : "none";
+    document.getElementById("cratePriceWrap").style.display = (mode==="crate") ? "block" : "none";
+    updateOutputs();
+  }
+
+  function populateSelect(){
+    const sel = document.getElementById("selectBeer");
+    sel.innerHTML = "";
+    if(rows.length === 0){
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = "Inga sparade rader (lägg till en!)";
+      sel.appendChild(opt);
+      selectedId = null;
+      return;
+    }
+    rows.forEach(r=>{
+      const opt = document.createElement("option");
+      opt.value = r.id;
+      opt.textContent = r.name + (r.notes ? " — " + r.notes : "");
+      sel.appendChild(opt);
+    });
+    if(!selectedId || !rows.some(r=>r.id===selectedId)) selectedId = rows[0].id;
+    sel.value = selectedId;
+  }
+
+  function loadSelectedToForm(){
+    const r = rows.find(x=>x.id===selectedId);
+    if(!r) return;
+
+    document.getElementById("beerName").value = r.name || "";
+    document.getElementById("notes").value = r.notes || "";
+    document.getElementById("buyMode").value = r.mode || "crate";
+    document.getElementById("quantityCrates").value = r.crates ?? 1;
+    document.getElementById("overhead").value = r.overhead ?? 0;
+
+    document.getElementById("cratePrice").value = (r.cratePrice ?? "");
+    document.getElementById("countPerCrate").value = (r.countPerCrate ?? 24);
+
+    document.getElementById("unitPrice").value = (r.unitPrice ?? "");
+    document.getElementById("unitsTotal").value = (r.unitsTotal ?? "");
+
+    document.getElementById("clPerUnit").value = (r.clPerUnit ?? "");
+    document.getElementById("abv").value = (r.abv ?? "");
+
+    setModeUI();
+  }
+
+  function updateOutputs(){
+    const c = calcCurrent();
+
+    document.getElementById("totalCost").textContent = money(c.totalCost);
+    document.getElementById("totalUnits").textContent = intish(c.units);
+    document.getElementById("pricePerUnit").textContent = money(c.ppu);
+    document.getElementById("overheadPerUnit").textContent = money(c.overheadPerUnit);
+
+    document.getElementById("pureAlcohol").textContent = num(c.pureAlcohol, 2);
+    document.getElementById("apk").textContent = num(c.apk, 4);
+
+    if(c.units <= 0){
+      warn("Jag behöver antal burkar för att kunna räkna. (Att dividera med 'vibe' är tyvärr en premium-feature.)");
+    } else if(c.totalCost <= 0){
+      warn("Totalkostnad är 0 kr. Antingen är du sponsrad eller så saknas siffror.");
+    } else if((c.clPerUnit <= 0 || c.abv <= 0)){
+      warn("Pris funkar, men för 'alkohol per krona' behöver du volym (cl) och alkoholhalt (%).");
+    } else {
+      warn("");
+    }
+
+    renderTable();
+  }
+
+  function computeRowStats(r){
+    let units = 0, varu = 0;
+    if(r.mode==="crate"){
+      units = (r.unitsTotal>0) ? r.unitsTotal : (r.countPerCrate * r.crates);
+      varu = (r.cratePrice || 0) * (r.crates || 1);
+    }else{
+      units = (r.unitsTotal>0) ? r.unitsTotal : (r.countPerCrate * r.crates);
+      varu = (r.unitPrice || 0) * units;
+    }
+    const total = varu + (r.overhead||0);
+    const ppu = units>0 ? total/units : NaN;
+
+    const pureAlcohol = units * (r.clPerUnit||0) * ((r.abv||0)/100.0);
+    const apk = total>0 ? pureAlcohol/total : NaN;
+
+    return {units,total,ppu,pureAlcohol,apk};
+  }
+
+  function renderTable(){
+    const tbody = document.querySelector("#tbl tbody");
+    const q = (document.getElementById("filter").value || "").toLowerCase();
+
+    const view = rows
+      .map(r => ({...r, ...computeRowStats(r)}))
+      .filter(r => (r.name + " " + (r.notes||"")).toLowerCase().includes(q));
+
+    view.sort((a,b)=>{
+      const av = a[sortKey], bv = b[sortKey];
+      if(sortKey==="name" || sortKey==="mode"){
+        const as = String(av||"").toLowerCase(), bs = String(bv||"").toLowerCase();
+        return sortDir==="asc" ? as.localeCompare(bs,"sv") : bs.localeCompare(as,"sv");
+      }
+      if(!isFinite(av) && !isFinite(bv)) return 0;
+      if(!isFinite(av)) return 1;
+      if(!isFinite(bv)) return -1;
+      return sortDir==="asc" ? (av-bv) : (bv-av);
+    });
+
+    tbody.innerHTML = "";
+    view.forEach(r=>{
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${escapeHtml(r.name)}${r.notes ? `<div class="hint">${escapeHtml(r.notes)}</div>` : ""}</td>
+        <td>${money(r.ppu)}</td>
+        <td>${num(r.apk, 4)}</td>
+        <td>${r.mode==="crate" ? "flak" : "burk"}</td>
+      `;
+      tr.addEventListener("click", ()=>{
+        selectedId = r.id;
+        document.getElementById("selectBeer").value = selectedId;
+        loadSelectedToForm();
+      });
+      tbody.appendChild(tr);
+    });
+  }
+
+  function clearForm(){
+    selectedId = null;
+    document.getElementById("beerName").value = "";
+    document.getElementById("notes").value = "";
+    document.getElementById("buyMode").value = "crate";
+    document.getElementById("quantityCrates").value = 1;
+    document.getElementById("overhead").value = 0;
+    document.getElementById("cratePrice").value = "";
+    document.getElementById("countPerCrate").value = 24;
+    document.getElementById("unitPrice").value = "";
+    document.getElementById("unitsTotal").value = "";
+    document.getElementById("clPerUnit").value = "";
+    document.getElementById("abv").value = "";
+    setModeUI();
+  }
+
+  function saveCurrentRow(){
+    const name = (document.getElementById("beerName").value || "").trim();
+    if(!name){ warn("Skriv ett ölnamn först. (Annars blir det 'Okänd burk', och den vill ingen dejta.)"); return; }
+
+    const row = {
+      id: selectedId || uid(),
+      name,
+      notes: (document.getElementById("notes").value || "").trim(),
+      mode: document.getElementById("buyMode").value,
+      crates: +document.getElementById("quantityCrates").value || 1,
+      overhead: +document.getElementById("overhead").value || 0,
+
+      cratePrice: +document.getElementById("cratePrice").value || 0,
+      countPerCrate: +document.getElementById("countPerCrate").value || 24,
+
+      unitPrice: +document.getElementById("unitPrice").value || 0,
+      unitsTotal: +document.getElementById("unitsTotal").value || 0,
+
+      clPerUnit: +document.getElementById("clPerUnit").value || 0,
+      abv: +document.getElementById("abv").value || 0
+    };
+
+    const ix = rows.findIndex(r=>r.id===row.id);
+    if(ix>=0) rows[ix]=row; else rows.unshift(row);
+
+    saveRows(rows);
+    selectedId = row.id;
+    populateSelect();
+    document.getElementById("selectBeer").value = selectedId;
+    warn("Sparat! (Lokalt i din webbläsare.)");
+    updateOutputs();
+  }
+
+  function deleteSelected(){
+    if(!selectedId) { warn("Ingen rad vald att ta bort."); return; }
+    rows = rows.filter(r=>r.id!==selectedId);
+    saveRows(rows);
+    selectedId = rows[0]?.id || null;
+    populateSelect();
+    if(selectedId) loadSelectedToForm(); else clearForm();
+    warn("Borttagen. Den lever vidare i återvinningen. ♻️");
+    updateOutputs();
+  }
+
+  function hookSorting(){
+    document.querySelectorAll("#tbl thead th").forEach(th=>{
+      th.addEventListener("click", ()=>{
+        const k = th.getAttribute("data-k");
+        if(!k) return;
+        if(sortKey===k) sortDir = (sortDir==="asc") ? "desc" : "asc";
+        else { sortKey = k; sortDir = (k==="name"||k==="mode") ? "asc" : "desc"; }
+        renderTable();
+      });
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", ()=>{
+    populateSelect();
+    if(selectedId) loadSelectedToForm(); else clearForm();
+    hookSorting();
+    updateOutputs();
+
+    document.getElementById("buyMode").addEventListener("change", setModeUI);
+    ["beerName","notes","quantityCrates","cratePrice","countPerCrate","unitPrice","unitsTotal","overhead","clPerUnit","abv","filter"]
+      .forEach(id => document.getElementById(id).addEventListener("input", updateOutputs));
+
+    document.getElementById("selectBeer").addEventListener("change", e=>{
+      selectedId = e.target.value || null;
+      loadSelectedToForm();
+    });
+
+    document.getElementById("saveRow").addEventListener("click", saveCurrentRow);
+    document.getElementById("newRow").addEventListener("click", ()=>{ clearForm(); warn(""); updateOutputs(); });
+    document.getElementById("deleteRow").addEventListener("click", deleteSelected);
+
+    document.getElementById("resetSort").addEventListener("click", ()=>{
+      sortKey="apk"; sortDir="desc";
+      document.getElementById("filter").value="";
+      renderTable();
+    });
+  });
+</script>
+</body>
+</html>
